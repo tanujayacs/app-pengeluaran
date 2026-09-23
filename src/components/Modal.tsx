@@ -36,7 +36,7 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
             <X className="w-5 h-5 text-zinc-400" />
           </button>
         </div>
-        <div className="overflow-y-auto flex-1 px-5 py-4">
+        <div className="overflow-y-auto flex-1 px-5 pt-4 pb-[max(env(safe-area-inset-bottom,16px),16px)]">
           {children}
         </div>
       </div>
