@@ -4,6 +4,7 @@
 import { useState, useMemo } from 'react';
 import { useStore } from '../../hooks/useStore';
 import { DynamicIcon } from '../../components/DynamicIcon';
+import { DatePickerDialog } from '../../components/DatePickerDialog';
 import { formatIDR, formatDateIndo, getTodayStr, offsetDate } from '../../utils/formatters';
 import { ChevronLeft, ChevronRight, History, ChevronRight as Arrow } from 'lucide-react';
 import type { Transaction } from '../../types';
@@ -15,6 +16,7 @@ interface TransaksiPageProps {
 export function TransaksiPage({ onOpenDetail }: TransaksiPageProps) {
   const { transactions, categories, wallets, setSubPage } = useStore();
   const [selectedDate, setSelectedDate] = useState(getTodayStr());
+  const [showDatePicker, setShowDatePicker] = useState(false);
 
   // Filter transactions for selected date
   const dayTransactions = useMemo(() =>
@@ -37,15 +39,39 @@ export function TransaksiPage({ onOpenDetail }: TransaksiPageProps) {
     <div>
       {/* Header */}
       <div className="header-bar">
-        <button onClick={() => setSelectedDate(offsetDate(selectedDate, -1))} className="p-2 -ml-2 active:opacity-70">
+        <button
+          type="button"
+          onClick={() => setSelectedDate(prev => offsetDate(prev, -1))}
+          className="p-2 -ml-2 active:opacity-70 transition-opacity"
+          title="Hari Sebelumnya"
+        >
           <ChevronLeft className="w-5 h-5" />
         </button>
-        <span className="text-sm font-semibold">{formatDateIndo(selectedDate)}</span>
+
+        <button
+          type="button"
+          onClick={() => setShowDatePicker(true)}
+          className="text-sm font-semibold active:opacity-70 px-2 py-1 rounded-lg transition-opacity flex items-center gap-1 cursor-pointer"
+          title="Klik untuk memilih tanggal"
+        >
+          <span>{formatDateIndo(selectedDate)}</span>
+        </button>
+
         <div className="flex items-center gap-1">
-          <button onClick={() => setSelectedDate(offsetDate(selectedDate, 1))} className="p-2 active:opacity-70">
+          <button
+            type="button"
+            onClick={() => setSelectedDate(prev => offsetDate(prev, 1))}
+            className="p-2 active:opacity-70 transition-opacity"
+            title="Hari Berikutnya"
+          >
             <ChevronRight className="w-5 h-5" />
           </button>
-          <button onClick={() => setSubPage('riwayat')} className="p-2 active:opacity-70">
+          <button
+            type="button"
+            onClick={() => setSubPage('riwayat')}
+            className="p-2 active:opacity-70 transition-opacity"
+            title="Riwayat Transaksi"
+          >
             <History className="w-5 h-5" />
           </button>
         </div>
@@ -103,6 +129,14 @@ export function TransaksiPage({ onOpenDetail }: TransaksiPageProps) {
           })
         )}
       </div>
+
+      {/* Date Picker Dialog */}
+      <DatePickerDialog
+        open={showDatePicker}
+        value={selectedDate}
+        onSelect={d => setSelectedDate(d)}
+        onClose={() => setShowDatePicker(false)}
+      />
     </div>
   );
 }

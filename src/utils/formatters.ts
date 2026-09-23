@@ -22,37 +22,54 @@ export function parseAmount(formatted: string): number {
   return parseInt(formatted.replace(/\D/g, ''), 10) || 0;
 }
 
-/** Get today YYYY-MM-DD */
+const pad2 = (n: number) => String(n).padStart(2, '0');
+
+/** Format date object to YYYY-MM-DD */
+export function toLocalDateStr(d: Date): string {
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+}
+
+/** Get today YYYY-MM-DD in local time */
 export function getTodayStr(): string {
-  return new Date().toISOString().split('T')[0];
+  return toLocalDateStr(new Date());
 }
 
 /** Get current time HH:mm */
 export function getCurrentTime(): string {
   const now = new Date();
-  return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+  return `${pad2(now.getHours())}:${pad2(now.getMinutes())}`;
 }
 
 /** Get current month YYYY-MM */
 export function getCurrentMonth(): string {
   const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  return `${now.getFullYear()}-${pad2(now.getMonth() + 1)}`;
 }
 
 /** Format date to Indonesian: "Sel, 22 Sep 2026" */
 export function formatDateIndo(dateStr: string): string {
-  const d = new Date(dateStr + 'T00:00:00');
+  const [y, m, day] = dateStr.split('-').map(Number);
+  const d = new Date(y, m - 1, day);
   const days = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
   const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
   return `${days[d.getDay()]}, ${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
 }
 
+/** Format date short: "Rab, 23 Sep" */
+export function formatDateShortIndo(dateStr: string): string {
+  const [y, m, day] = dateStr.split('-').map(Number);
+  const d = new Date(y, m - 1, day);
+  const days = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+  return `${days[d.getDay()]}, ${d.getDate()} ${months[d.getMonth()]}`;
+}
+
 /** Format date for history grouping: "22 09 2026 Senin" */
 export function formatDateGroup(dateStr: string): string {
-  const d = new Date(dateStr + 'T00:00:00');
+  const [y, m, day] = dateStr.split('-').map(Number);
+  const d = new Date(y, m - 1, day);
   const days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return `${pad(d.getDate())} ${pad(d.getMonth() + 1)} ${d.getFullYear()} ${days[d.getDay()]}`;
+  return `${pad2(day)} ${pad2(m)} ${y} ${days[d.getDay()]}`;
 }
 
 /** Format month display: "September 2026" */
@@ -62,24 +79,24 @@ export function formatMonthIndo(monthStr: string): string {
   return `${months[parseInt(month) - 1]} ${year}`;
 }
 
-/** Navigate date by offset days */
+/** Navigate date by offset days safely without timezone bugs */
 export function offsetDate(dateStr: string, offset: number): string {
-  const d = new Date(dateStr + 'T00:00:00');
-  d.setDate(d.getDate() + offset);
-  return d.toISOString().split('T')[0];
+  const [y, m, day] = dateStr.split('-').map(Number);
+  const d = new Date(y, m - 1, day + offset);
+  return toLocalDateStr(d);
 }
 
 /** Get week start/end for a date */
 export function getWeekRange(dateStr: string): { start: string; end: string } {
-  const d = new Date(dateStr + 'T00:00:00');
-  const dayOfWeek = d.getDay();
-  const start = new Date(d);
-  start.setDate(d.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1));
-  const end = new Date(start);
-  end.setDate(start.getDate() + 6);
+  const [y, m, day] = dateStr.split('-').map(Number);
+  const d = new Date(y, m - 1, day);
+  const dayOfWeek = d.getDay(); // 0 is Sun
+  const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+  const start = new Date(y, m - 1, day + diffToMonday);
+  const end = new Date(y, m - 1, day + diffToMonday + 6);
   return {
-    start: start.toISOString().split('T')[0],
-    end: end.toISOString().split('T')[0],
+    start: toLocalDateStr(start),
+    end: toLocalDateStr(end),
   };
 }
 
