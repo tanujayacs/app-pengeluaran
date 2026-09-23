@@ -39,42 +39,48 @@ export function TransaksiPage({ onOpenDetail }: TransaksiPageProps) {
     <div>
       {/* Header */}
       <div className="header-bar">
-        <button
-          type="button"
-          onClick={() => setSelectedDate(prev => offsetDate(prev, -1))}
-          className="p-2 -ml-2 active:opacity-70 transition-opacity"
-          title="Hari Sebelumnya"
-        >
-          <ChevronLeft className="w-5 h-5" />
-        </button>
+        {/* Left placeholder to balance the right icon */}
+        <div className="w-8" />
 
-        <button
-          type="button"
-          onClick={() => setShowDatePicker(true)}
-          className="text-sm font-semibold active:opacity-70 px-2 py-1 rounded-lg transition-opacity flex items-center gap-1 cursor-pointer"
-          title="Klik untuk memilih tanggal"
-        >
-          <span>{formatDateIndo(selectedDate)}</span>
-        </button>
+        {/* Compact Date Navigation: < tanggal > */}
+        <div className="flex items-center gap-0.5">
+          <button
+            type="button"
+            onClick={() => setSelectedDate(prev => offsetDate(prev, -1))}
+            className="p-1.5 rounded-lg hover:bg-white/10 active:opacity-70 transition-all cursor-pointer"
+            title="Hari Sebelumnya"
+          >
+            <ChevronLeft className="w-5 h-5" />
+          </button>
 
-        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={() => setShowDatePicker(true)}
+            className="text-sm font-semibold active:opacity-70 px-2.5 py-1 rounded-lg hover:bg-white/10 transition-all cursor-pointer"
+            title="Klik untuk memilih tanggal"
+          >
+            <span>{formatDateIndo(selectedDate)}</span>
+          </button>
+
           <button
             type="button"
             onClick={() => setSelectedDate(prev => offsetDate(prev, 1))}
-            className="p-2 active:opacity-70 transition-opacity"
+            className="p-1.5 rounded-lg hover:bg-white/10 active:opacity-70 transition-all cursor-pointer"
             title="Hari Berikutnya"
           >
             <ChevronRight className="w-5 h-5" />
           </button>
-          <button
-            type="button"
-            onClick={() => setSubPage('riwayat')}
-            className="p-2 active:opacity-70 transition-opacity"
-            title="Riwayat Transaksi"
-          >
-            <History className="w-5 h-5" />
-          </button>
         </div>
+
+        {/* Right action button */}
+        <button
+          type="button"
+          onClick={() => setSubPage('riwayat')}
+          className="p-1.5 rounded-lg hover:bg-white/10 active:opacity-70 transition-all cursor-pointer"
+          title="Riwayat Transaksi"
+        >
+          <History className="w-5 h-5" />
+        </button>
       </div>
 
       {/* Summary */}
