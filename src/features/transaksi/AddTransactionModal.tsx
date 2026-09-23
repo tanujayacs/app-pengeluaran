@@ -1,13 +1,13 @@
 // ============================================================
-// Spendly v2 — Add Transaction Modal (with Title & Category Suggestions & Quick Add)
+// Spendly v2 — Add & Edit Transaction Modal
 // ============================================================
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { Modal } from '../../components/Modal';
 import { DynamicIcon } from '../../components/DynamicIcon';
 import { useStore } from '../../hooks/useStore';
 import { formatAmountInput, parseAmount, getTodayStr, getCurrentTime } from '../../utils/formatters';
-import { ArrowRightLeft, Plus, Check } from 'lucide-react';
-import type { Transaction, Category } from '../../types';
+import { ArrowRightLeft } from 'lucide-react';
+import type { Transaction } from '../../types';
 
 interface Props {
   open: boolean;
@@ -36,32 +36,24 @@ export function AddTransactionModal({ open, onClose, editTransaction, defaultTyp
   const [destWalletId, setDestWalletId] = useState(0);
   const [amountStr, setAmountStr] = useState('');
   const [title, setTitle] = useState('');
-  const [selectedCatId, setSelectedCatId] = useState(0);
-  const [categoryInput, setCategoryInput] = useState('');
+  const [categoryName, setCategoryName] = useState('');
   const [date, setDate] = useState(getTodayStr());
   const [time, setTime] = useState(getCurrentTime());
   const [notes, setNotes] = useState('');
 
   const isEditing = !!editTransaction;
 
-  // Title suggestions from history
-  const titleSuggestions = useMemo(() => getTitleSuggestions(), [getTitleSuggestions, open]);
+  // Title recommendations based on previous transactions
+  const titleSuggestions = useMemo(() => {
+    if (type === 'transfer') return [];
+    return getTitleSuggestions(type);
+  }, [getTitleSuggestions, type, open, editTransaction]);
 
-  // Category suggestions from history
+  // Category recommendations based on previous transactions
   const categorySuggestions = useMemo(() => {
-    const list = getCategorySuggestions().filter(c => c.type === type);
-    // If not enough from history, fallback to categories
-    const fallback = categories.filter(c => c.type === type);
-    const combined = [...list];
-    fallback.forEach(f => {
-      if (!combined.some(c => c.id === f.id)) combined.push(f);
-    });
-    return combined;
-  }, [getCategorySuggestions, categories, type, open]);
-
-  const filteredCategories = useMemo(() => {
-    return categories.filter(c => type === 'transfer' ? false : c.type === type);
-  }, [categories, type]);
+    if (type === 'transfer') return [];
+    return getCategorySuggestions(type);
+  }, [getCategorySuggestions, type, open, editTransaction]);
 
   useEffect(() => {
     if (open) {
@@ -72,9 +64,8 @@ export function AddTransactionModal({ open, onClose, editTransaction, defaultTyp
         setDestWalletId(editTransaction.destinationWalletId || 0);
         setAmountStr(formatAmountInput(String(editTransaction.amount)));
         setTitle(editTransaction.title);
-        setSelectedCatId(editTransaction.categoryId);
         const cat = categories.find(c => c.id === editTransaction.categoryId);
-        setCategoryInput(cat ? cat.name : '');
+        setCategoryName(cat ? cat.name : '');
         setDate(editTransaction.date);
         setTime(editTransaction.time);
         setNotes(editTransaction.notes || '');
@@ -85,8 +76,7 @@ export function AddTransactionModal({ open, onClose, editTransaction, defaultTyp
         setDestWalletId(wallets[1]?.id ?? 0);
         setAmountStr('');
         setTitle('');
-        setSelectedCatId(0);
-        setCategoryInput('');
+        setCategoryName('');
         setDate(getTodayStr());
         setTime(getCurrentTime());
         setNotes('');
@@ -100,48 +90,27 @@ export function AddTransactionModal({ open, onClose, editTransaction, defaultTyp
     setTimeout(() => inputRef.current?.focus(), 100);
   };
 
-  const handleSelectCategory = (cat: Category) => {
-    setSelectedCatId(cat.id!);
-    setCategoryInput(cat.name);
-  };
-
-  const handleQuickAddCategory = async () => {
-    const trimmed = categoryInput.trim();
-    if (!trimmed) return;
-    const existing = categories.find(c => c.name.toLowerCase() === trimmed.toLowerCase() && c.type === type);
-    if (existing) {
-      handleSelectCategory(existing);
-      return;
-    }
-    const newId = await addCategory({
-      name: trimmed,
-      type: type === 'income' ? 'income' : 'expense',
-      icon: 'Tag',
-    });
-    setSelectedCatId(newId);
-    setCategoryInput(trimmed);
-  };
-
   const handleSubmit = async () => {
     const amount = parseAmount(amountStr);
     if (amount <= 0 || walletId === 0) return;
 
-    let finalCatId = selectedCatId;
+    let finalCatId = 0;
     if (type !== 'transfer') {
-      // If user typed category name but didn't click pill
-      if (!finalCatId && categoryInput.trim()) {
-        const found = categories.find(c => c.name.toLowerCase() === categoryInput.trim().toLowerCase() && c.type === type);
-        if (found) {
-          finalCatId = found.id!;
-        } else {
-          finalCatId = await addCategory({
-            name: categoryInput.trim(),
-            type: type === 'income' ? 'income' : 'expense',
-            icon: 'Tag',
-          });
-        }
+      const trimmedCat = categoryName.trim();
+      if (!trimmedCat) return;
+
+      const existing = categories.find(
+        c => c.name.toLowerCase() === trimmedCat.toLowerCase() && c.type === type
+      );
+      if (existing?.id) {
+        finalCatId = existing.id;
+      } else {
+        finalCatId = await addCategory({
+          name: trimmedCat,
+          type: type === 'income' ? 'income' : 'expense',
+          icon: 'Tag',
+        });
       }
-      if (!finalCatId) return;
     }
 
     const txnData = {
@@ -150,7 +119,7 @@ export function AddTransactionModal({ open, onClose, editTransaction, defaultTyp
       categoryId: type === 'transfer' ? 0 : finalCatId,
       walletId,
       destinationWalletId: type === 'transfer' ? destWalletId : undefined,
-      title: title.trim() || (type === 'transfer' ? 'Pindah Saldo' : (categories.find(c => c.id === finalCatId)?.name ?? '')),
+      title: title.trim() || (type === 'transfer' ? 'Pindah Saldo' : categoryName.trim()),
       date,
       time,
       notes: notes.trim() || undefined,
@@ -165,8 +134,6 @@ export function AddTransactionModal({ open, onClose, editTransaction, defaultTyp
   };
 
   const selectedWallet = wallets.find(w => w.id === walletId);
-  const isCustomCategoryInputNew = categoryInput.trim().length > 0 &&
-    !categories.some(c => c.name.toLowerCase() === categoryInput.trim().toLowerCase() && c.type === type);
 
   // Step 1: Wallet selection
   if (step === 'wallet') {
@@ -261,7 +228,7 @@ export function AddTransactionModal({ open, onClose, editTransaction, defaultTyp
           </div>
         )}
 
-        {/* Judul & Saran Judul */}
+        {/* Judul & Rekomendasi Judul */}
         {type !== 'transfer' && (
           <div>
             <label className="text-[10px] text-zinc-400 font-medium mb-1 block">Judul</label>
@@ -269,78 +236,51 @@ export function AddTransactionModal({ open, onClose, editTransaction, defaultTyp
               type="text"
               value={title}
               onChange={e => setTitle(e.target.value)}
-              placeholder="Ketik atau pilih saran di bawah..."
+              placeholder="Ketik atau pilih di bawah..."
               className="input-field"
             />
-            {/* Saran Judul */}
             {titleSuggestions.length > 0 && (
-              <div className="mt-2">
-                <p className="text-[10px] text-zinc-400 mb-1">Saran Judul:</p>
-                <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto py-0.5">
-                  {titleSuggestions.slice(0, 8).map(s => (
-                    <button
-                      key={s}
-                      type="button"
-                      onClick={() => setTitle(s)}
-                      className={`pill text-[11px] ${title.toLowerCase() === s.toLowerCase() ? 'pill-active' : ''}`}
-                    >
-                      {s}
-                    </button>
-                  ))}
-                </div>
+              <div className="flex flex-wrap gap-1.5 mt-2">
+                {titleSuggestions.map(s => (
+                  <button
+                    key={s}
+                    type="button"
+                    onClick={() => setTitle(s)}
+                    className={`pill text-[11px] ${title.toLowerCase() === s.toLowerCase() ? 'pill-active' : ''}`}
+                  >
+                    {s}
+                  </button>
+                ))}
               </div>
             )}
           </div>
         )}
 
-        {/* Kategori & Saran Kategori */}
+        {/* Kategori & Rekomendasi Kategori */}
         {type !== 'transfer' && (
           <div>
             <label className="text-[10px] text-zinc-400 font-medium mb-1 block">Kategori</label>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={categoryInput}
-                onChange={e => {
-                  setCategoryInput(e.target.value);
-                  const match = categories.find(c => c.name.toLowerCase() === e.target.value.trim().toLowerCase() && c.type === type);
-                  setSelectedCatId(match ? match.id! : 0);
-                }}
-                placeholder="Ketik atau pilih kategori di bawah..."
-                className="input-field flex-1"
-              />
-              {isCustomCategoryInputNew && (
-                <button
-                  type="button"
-                  onClick={handleQuickAddCategory}
-                  className="px-3 py-2 bg-emerald-500 text-white rounded-xl text-xs font-semibold shrink-0 flex items-center gap-1 active:scale-95 transition-all shadow-sm"
-                >
-                  <Plus className="w-3.5 h-3.5" /> Tambah
-                </button>
-              )}
-            </div>
-
-            {/* Saran Kategori */}
-            <div className="mt-2 space-y-1">
-              <p className="text-[10px] text-zinc-400">Saran Kategori:</p>
-              <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto py-0.5">
-                {categorySuggestions.map(cat => {
-                  const isSelected = selectedCatId === cat.id;
-                  return (
-                    <button
-                      key={cat.id}
-                      type="button"
-                      onClick={() => handleSelectCategory(cat)}
-                      className={`flex items-center gap-1 pill text-[11px] ${isSelected ? 'pill-active' : ''}`}
-                    >
-                      <DynamicIcon name={cat.icon || 'Tag'} className="w-3 h-3" />
-                      <span>{cat.name}</span>
-                      {isSelected && <Check className="w-3 h-3 ml-0.5 text-blue-600" />}
-                    </button>
-                  );
-                })}
+            <input
+              type="text"
+              value={categoryName}
+              onChange={e => setCategoryName(e.target.value)}
+              placeholder="Ketik atau pilih di bawah..."
+              className="input-field"
+            />
+            {categorySuggestions.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mt-2">
+                {categorySuggestions.map(cat => (
+                  <button
+                    key={cat}
+                    type="button"
+                    onClick={() => setCategoryName(cat)}
+                    className={`pill text-[11px] ${categoryName.toLowerCase() === cat.toLowerCase() ? 'pill-active' : ''}`}
+                  >
+                    {cat}
+                  </button>
+                ))}
               </div>
-            </div>
+            )}
           </div>
         )}
 
@@ -358,7 +298,7 @@ export function AddTransactionModal({ open, onClose, editTransaction, defaultTyp
         {/* Submit Button */}
         <button
           onClick={handleSubmit}
-          disabled={parseAmount(amountStr) <= 0 || (type !== 'transfer' && !selectedCatId && !categoryInput.trim())}
+          disabled={parseAmount(amountStr) <= 0 || (type !== 'transfer' && !categoryName.trim())}
           className="w-full btn-primary py-3 text-sm font-semibold disabled:opacity-40 disabled:cursor-not-allowed shadow-md"
         >
           {isEditing ? 'Simpan Perubahan' : 'Tambahkan'}

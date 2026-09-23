@@ -90,8 +90,8 @@ interface SpendlyState {
   deleteRekapCard: (id: number) => Promise<void>;
 
   // Suggestions
-  getTitleSuggestions: () => string[];
-  getCategorySuggestions: () => Category[];
+  getTitleSuggestions: (type?: 'expense' | 'income') => string[];
+  getCategorySuggestions: (type?: 'expense' | 'income') => string[];
 
   // Export/Import
   exportData: () => Promise<string>;
@@ -255,21 +255,33 @@ export const useStore = create<SpendlyState>()((set, get) => ({
   deleteRekapCard: async (id: number) => { await db.customRekapCards.delete(id); await get().loadAllData(); get().showToast('Custom rekap dihapus'); },
 
   // === SUGGESTIONS ===
-  getTitleSuggestions: (): string[] => {
+  getTitleSuggestions: (type: 'expense' | 'income' = 'expense'): string[] => {
     const titleCount = new Map<string, number>();
     get().transactions.forEach((t: Transaction) => {
-      if (t.title && t.type === 'expense') titleCount.set(t.title, (titleCount.get(t.title) || 0) + 1);
+      if (t.title && t.type === type) {
+        const trimmed = t.title.trim();
+        if (trimmed) titleCount.set(trimmed, (titleCount.get(trimmed) || 0) + 1);
+      }
     });
     return Array.from(titleCount.entries()).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([title]) => title);
   },
 
-  getCategorySuggestions: (): Category[] => {
-    const catCount = new Map<number, number>();
+  getCategorySuggestions: (type: 'expense' | 'income' = 'expense'): string[] => {
+    const catCount = new Map<string, number>();
     get().transactions.forEach((t: Transaction) => {
-      if (t.type === 'expense' && t.categoryId) catCount.set(t.categoryId, (catCount.get(t.categoryId) || 0) + 1);
+      if (t.type === type && t.categoryId) {
+        const cat = get().categories.find(c => c.id === t.categoryId);
+        if (cat?.name) {
+          catCount.set(cat.name, (catCount.get(cat.name) || 0) + 1);
+        }
+      }
     });
-    const sorted = Array.from(catCount.entries()).sort((a, b) => b[1] - a[1]);
-    return sorted.map(([id]) => get().categories.find(c => c.id === id)).filter(Boolean) as Category[];
+    get().categories.filter(c => c.type === type).forEach(c => {
+      if (!catCount.has(c.name)) {
+        catCount.set(c.name, 0);
+      }
+    });
+    return Array.from(catCount.entries()).sort((a, b) => b[1] - a[1]).slice(0, 12).map(([name]) => name);
   },
 
   // === EXPORT/IMPORT ===
