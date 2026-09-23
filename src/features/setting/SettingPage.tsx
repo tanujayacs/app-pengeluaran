@@ -26,6 +26,7 @@ import {
   FileJson, FileSpreadsheet, Hash, Tags, Plus,
   Cloud, CloudUpload, CloudDownload, RefreshCw, Copy, Check,
   UserCircle2, Edit3, LogOut, KeyRound, Eye, EyeOff, Smartphone, ShieldCheck,
+  Heart, Coffee, ExternalLink,
 } from 'lucide-react';
 import type { ThemeColor, Category, UserProfile } from '../../types';
 
@@ -473,6 +474,37 @@ export function SettingPage() {
               Data tersimpan lokal di IndexedDB HP dan dapat disinkronkan ke Supabase Cloud secara aman.
             </p>
           </div>
+        </div>
+
+        {/* Donation / Saweria Card */}
+        <div className="bg-gradient-to-br from-amber-500/10 via-orange-500/5 to-amber-500/10 rounded-2xl p-4 border border-amber-200/70 shadow-sm space-y-3">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-sm shadow-amber-500/20">
+              <Heart className="w-5 h-5 fill-white text-white" />
+            </div>
+            <div className="flex-1">
+              <div className="flex items-center gap-1.5">
+                <p className="text-sm font-bold text-zinc-800">Dukung Aplikasi Ini ☕</p>
+                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-800 font-semibold border border-amber-200/80">
+                  Saweria
+                </span>
+              </div>
+              <p className="text-[11px] text-zinc-500 mt-0.5 leading-relaxed">
+                Suka dengan Spendly? Kamu bisa dukung pengembangan aplikasi ini lewat Saweria!
+              </p>
+            </div>
+          </div>
+
+          <a
+            href="https://saweria.co/littlexierra"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm active:scale-95 transition-all"
+          >
+            <Coffee className="w-4 h-4" />
+            <span>Traktir Kopi di Saweria</span>
+            <ExternalLink className="w-3.5 h-3.5 opacity-80 ml-0.5" />
+          </a>
         </div>
 
         {/* Angka Desimal */}
