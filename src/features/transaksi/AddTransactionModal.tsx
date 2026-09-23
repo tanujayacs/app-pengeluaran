@@ -26,6 +26,7 @@ export function AddTransactionModal({ open, onClose, editTransaction, defaultTyp
     getTitleSuggestions,
     getCategorySuggestions,
     addCategory,
+    setActiveTab,
   } = useStore();
 
   const inputRef = useRef<HTMLInputElement>(null);
@@ -137,6 +138,33 @@ export function AddTransactionModal({ open, onClose, editTransaction, defaultTyp
 
   // Step 1: Wallet selection
   if (step === 'wallet') {
+    if (wallets.length === 0) {
+      return (
+        <Modal open={open} onClose={onClose} title="Pilih Rekening">
+          <div className="text-center py-6 px-3 space-y-3">
+            <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-500 flex items-center justify-center mx-auto">
+              <DynamicIcon name="Wallet" className="w-6 h-6 text-amber-500" />
+            </div>
+            <div>
+              <p className="text-sm font-bold text-zinc-800">Belum Ada Rekening</p>
+              <p className="text-xs text-zinc-500 mt-1 leading-relaxed">
+                Kamu perlu membuat minimal 1 rekening (misal: Tunai, BCA, atau E-Wallet) sebelum mencatat transaksi.
+              </p>
+            </div>
+            <button
+              onClick={() => {
+                onClose();
+                setActiveTab('rekening');
+              }}
+              className="btn-primary py-2.5 px-4 text-xs font-bold w-full active:scale-95 transition-all"
+            >
+              + Buat Rekening Sekarang
+            </button>
+          </div>
+        </Modal>
+      );
+    }
+
     return (
       <Modal open={open} onClose={onClose} title="Pilih Rekening">
         <div className="space-y-2">

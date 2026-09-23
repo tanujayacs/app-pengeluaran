@@ -89,28 +89,49 @@ export function RekeningPage() {
       </div>
 
       {/* Wallet list */}
-      <div className="bg-white">
-        {wallets.map(w => (
-          <div key={w.id} className="flex items-center gap-3 px-4 py-3.5 border-b border-zinc-100">
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: `${w.color}15` }}>
-              <DynamicIcon name={w.icon} className="w-5 h-5" style={{ color: w.color }} />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold">{w.name}</p>
-              <p className="text-xs text-zinc-400">{walletTypes.find(t => t.value === w.type)?.label || w.type}</p>
-            </div>
-            <p className="text-sm font-bold mr-2">Rp {formatIDR(w.balance)}</p>
-            <div className="flex gap-1 shrink-0">
-              <button onClick={() => openForm(w)} className="p-1.5 rounded-lg hover:bg-zinc-100 active:scale-90 transition-all">
-                <Edit className="w-3.5 h-3.5 text-zinc-400" />
-              </button>
-              <button onClick={() => setDeleteTarget(w)} className="p-1.5 rounded-lg hover:bg-rose-50 active:scale-90 transition-all">
-                <Trash2 className="w-3.5 h-3.5 text-rose-400" />
-              </button>
-            </div>
+      {wallets.length === 0 ? (
+        <div className="p-8 text-center bg-white space-y-3 m-3 rounded-2xl border border-zinc-100 shadow-sm">
+          <div className="w-12 h-12 rounded-2xl bg-zinc-100 text-zinc-400 flex items-center justify-center mx-auto">
+            <DynamicIcon name="Wallet" className="w-6 h-6 text-zinc-400" />
           </div>
-        ))}
-      </div>
+          <div>
+            <p className="text-sm font-bold text-zinc-800">Belum Ada Rekening</p>
+            <p className="text-xs text-zinc-400 mt-1 max-w-xs mx-auto leading-relaxed">
+              Mulai catat keuanganmu dengan menambahkan rekening (misal: Tunai, BCA, atau E-Wallet).
+            </p>
+          </div>
+          <button
+            onClick={() => openForm()}
+            className="btn-primary py-2.5 px-4 text-xs font-bold inline-flex items-center gap-1.5 active:scale-95 transition-all shadow-sm"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Tambah Rekening Baru</span>
+          </button>
+        </div>
+      ) : (
+        <div className="bg-white">
+          {wallets.map(w => (
+            <div key={w.id} className="flex items-center gap-3 px-4 py-3.5 border-b border-zinc-100">
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: `${w.color}15` }}>
+                <DynamicIcon name={w.icon} className="w-5 h-5" style={{ color: w.color }} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold">{w.name}</p>
+                <p className="text-xs text-zinc-400">{walletTypes.find(t => t.value === w.type)?.label || w.type}</p>
+              </div>
+              <p className="text-sm font-bold mr-2">Rp {formatIDR(w.balance)}</p>
+              <div className="flex gap-1 shrink-0">
+                <button onClick={() => openForm(w)} className="p-1.5 rounded-lg hover:bg-zinc-100 active:scale-90 transition-all">
+                  <Edit className="w-3.5 h-3.5 text-zinc-400" />
+                </button>
+                <button onClick={() => setDeleteTarget(w)} className="p-1.5 rounded-lg hover:bg-rose-50 active:scale-90 transition-all">
+                  <Trash2 className="w-3.5 h-3.5 text-rose-400" />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Add/Edit Modal */}
       <Modal open={showForm} onClose={() => setShowForm(false)} title={editing ? 'Edit Rekening' : 'Tambah Rekening'}>
