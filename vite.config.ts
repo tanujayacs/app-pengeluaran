@@ -14,8 +14,8 @@ export default defineConfig({
         name: 'Spendly — Expense Tracker',
         short_name: 'Spendly',
         description: 'Offline-first personal finance tracker',
-        theme_color: '#10B981',
-        background_color: '#09090B',
+        theme_color: '#3B82F6',
+        background_color: '#F1F5F9',
         display: 'standalone',
         icons: [
           { src: '/icon-192.png', sizes: '192x192', type: 'image/png' },
@@ -24,6 +24,8 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        skipWaiting: true,
+        clientsClaim: true,
       },
     }),
   ],

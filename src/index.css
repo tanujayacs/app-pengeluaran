@@ -64,7 +64,7 @@
   .header-bar {
     background-color: var(--color-primary);
     @apply text-white px-4 flex items-center justify-between sticky top-0 z-20 shadow-sm;
-    padding-top: calc(env(safe-area-inset-top, 0px) + 14px);
+    padding-top: max(calc(env(safe-area-inset-top, 0px) + 8px), 54px);
     padding-bottom: 12px;
   }
 
