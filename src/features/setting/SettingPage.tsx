@@ -1,14 +1,21 @@
 // ============================================================
-// Spendly v2 — Setting Page (with Theme, Category CRUD, Templates, Data)
+// Spendly v2 — Setting Page (with Theme, Category CRUD, Supabase Cloud Sync)
 // ============================================================
-import { useRef, useState } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { useStore } from '../../hooks/useStore';
 import { Modal, ConfirmDialog } from '../../components/Modal';
 import { DynamicIcon } from '../../components/DynamicIcon';
 import { themeColors } from '../../utils/formatters';
 import {
+  pushToCloud,
+  pullFromCloud,
+  getLastSyncedString,
+  checkCloudConnection,
+} from '../../services/cloudSync';
+import {
   Palette, Download, Upload, Trash2, Info, Lock,
   FileJson, FileSpreadsheet, Hash, Tags, Plus,
+  Cloud, CloudUpload, CloudDownload, RefreshCw, Copy, Check,
 } from 'lucide-react';
 import type { ThemeColor, Category } from '../../types';
 
@@ -27,6 +34,15 @@ const exclusiveColors = [
   { label: 'Titanium', color: '#878681' },
   { label: 'Rose Gold', color: '#B76E79' },
 ];
+
+const quickSqlScript = `-- Jalankan di SQL Editor Supabase:
+create table if not exists spendly_sync (
+  id text primary key,
+  data jsonb not null,
+  updated_at timestamp with time zone default timezone('utc'::text, now())
+);
+alter table spendly_sync enable row level security;
+create policy "Allow all on spendly_sync" on spendly_sync for all using (true) with check (true);`;
 
 export function SettingPage() {
   const {
@@ -51,6 +67,55 @@ export function SettingPage() {
   const [newCatName, setNewCatName] = useState('');
   const [newCatType, setNewCatType] = useState<'expense' | 'income'>('expense');
   const [deleteCatTarget, setDeleteCatTarget] = useState<Category | null>(null);
+
+  // Cloud Sync state
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [isRestoring, setIsRestoring] = useState(false);
+  const [showRestoreConfirm, setShowRestoreConfirm] = useState(false);
+  const [showSqlModal, setShowSqlModal] = useState(false);
+  const [copiedSql, setCopiedSql] = useState(false);
+  const [cloudStatus, setCloudStatus] = useState<{ connected: boolean; tablesReady: boolean; error?: string } | null>(null);
+  const [lastSyncedStr, setLastSyncedStr] = useState(getLastSyncedString());
+
+  useEffect(() => {
+    checkCloudConnection().then(status => setCloudStatus(status));
+  }, []);
+
+  const handlePushCloud = async () => {
+    setIsSyncing(true);
+    const res = await pushToCloud();
+    setIsSyncing(false);
+    if (res.success) {
+      setLastSyncedStr(getLastSyncedString());
+      setCloudStatus({ connected: true, tablesReady: true });
+      showToast('Data berhasil dicadangkan ke Supabase Cloud! ☁️');
+    } else {
+      if (res.error?.includes('not found') || res.error?.includes('does not exist')) {
+        setShowSqlModal(true);
+      }
+      showToast(res.error || 'Gagal sinkron ke cloud', 'error');
+    }
+  };
+
+  const handlePullCloud = async () => {
+    setIsRestoring(true);
+    const res = await pullFromCloud();
+    setIsRestoring(false);
+    setShowRestoreConfirm(false);
+    if (res.success) {
+      setLastSyncedStr(getLastSyncedString());
+      showToast(`Berhasil memulihkan ${res.count || 0} data dari Cloud! ✅`);
+    } else {
+      showToast(res.error || 'Gagal memulihkan dari cloud', 'error');
+    }
+  };
+
+  const handleCopySql = () => {
+    navigator.clipboard.writeText(quickSqlScript);
+    setCopiedSql(true);
+    showToast('Script SQL disalin ke clipboard');
+    setTimeout(() => setCopiedSql(false), 2500);
+  };
 
   const handleExportJSON = async () => {
     const json = await exportData();
@@ -113,14 +178,79 @@ export function SettingPage() {
             </div>
             <div>
               <p className="text-sm font-bold text-zinc-800">Spendly</p>
-              <p className="text-[11px] text-zinc-400">Offline Personal Finance v2.1</p>
+              <p className="text-[11px] text-zinc-400">Personal Finance with Cloud Backup</p>
             </div>
           </div>
           <div className="flex items-start gap-2 mt-3 p-3 bg-zinc-50 rounded-xl">
             <Info className="w-4 h-4 text-zinc-400 mt-0.5 shrink-0" />
             <p className="text-[11px] text-zinc-500 leading-relaxed">
-              Data disimpan 100% offline di perangkat kamu menggunakan IndexedDB lokal.
+              Data tersimpan lokal di IndexedDB HP dan dapat disinkronkan ke Supabase Cloud secara aman.
             </p>
+          </div>
+        </div>
+
+        {/* Cloud Sync & Backup Card */}
+        <div className="bg-white rounded-2xl p-4 border border-blue-100 shadow-sm space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600">
+                <Cloud className="w-4 h-4" />
+              </div>
+              <div>
+                <p className="text-xs font-bold text-zinc-800">Cloud Sync (Supabase)</p>
+                <div className="flex items-center gap-1.5 mt-0.5">
+                  <div className={`w-2 h-2 rounded-full ${cloudStatus?.tablesReady ? 'bg-emerald-500 animate-pulse' : cloudStatus?.connected ? 'bg-amber-500' : 'bg-zinc-400'}`} />
+                  <span className="text-[10px] text-zinc-500">
+                    {cloudStatus?.tablesReady
+                      ? 'Terhubung & Siap'
+                      : cloudStatus?.connected
+                      ? 'Tabel belum dibuat'
+                      : 'Memeriksa koneksi...'}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {cloudStatus && !cloudStatus.tablesReady && (
+              <button
+                onClick={() => setShowSqlModal(true)}
+                className="px-2.5 py-1 text-[10px] font-bold bg-amber-50 text-amber-700 rounded-lg border border-amber-200 active:scale-95 transition-all"
+              >
+                Setup SQL
+              </button>
+            )}
+          </div>
+
+          <p className="text-[11px] text-zinc-400">
+            Terakhir dicadangkan: <span className="text-zinc-600 font-medium">{lastSyncedStr}</span>
+          </p>
+
+          <div className="grid grid-cols-2 gap-2 pt-1">
+            <button
+              onClick={handlePushCloud}
+              disabled={isSyncing}
+              className="btn-primary py-2.5 px-3 text-xs font-semibold flex items-center justify-center gap-1.5 disabled:opacity-50 shadow-sm"
+            >
+              {isSyncing ? (
+                <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <CloudUpload className="w-3.5 h-3.5" />
+              )}
+              <span>{isSyncing ? 'Mencadangkan...' : 'Cadangkan Data'}</span>
+            </button>
+
+            <button
+              onClick={() => setShowRestoreConfirm(true)}
+              disabled={isRestoring}
+              className="py-2.5 px-3 text-xs font-semibold text-zinc-700 bg-zinc-100 hover:bg-zinc-200 rounded-xl flex items-center justify-center gap-1.5 active:scale-95 transition-all disabled:opacity-50"
+            >
+              {isRestoring ? (
+                <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <CloudDownload className="w-3.5 h-3.5 text-zinc-600" />
+              )}
+              <span>{isRestoring ? 'Memulihkan...' : 'Pulihkan Data'}</span>
+            </button>
           </div>
         </div>
 
@@ -213,13 +343,13 @@ export function SettingPage() {
 
         {/* Data Management */}
         <div className="bg-white rounded-2xl p-4 border border-zinc-100 shadow-sm space-y-2">
-          <p className="text-xs font-semibold text-zinc-500 mb-2">Manajemen Data</p>
+          <p className="text-xs font-semibold text-zinc-500 mb-2">Manajemen File Backup</p>
 
           <button onClick={handleExportJSON} className="w-full flex items-center gap-3 p-3 rounded-xl bg-zinc-50 active:bg-zinc-100 transition-colors">
             <FileJson className="w-4 h-4 text-emerald-500" />
             <div className="text-left flex-1">
               <p className="text-xs font-medium">Ekspor JSON</p>
-              <p className="text-[10px] text-zinc-400">Backup lengkap semua data</p>
+              <p className="text-[10px] text-zinc-400">Backup lokal file JSON</p>
             </div>
             <Download className="w-4 h-4 text-zinc-400" />
           </button>
@@ -236,8 +366,8 @@ export function SettingPage() {
           <button onClick={() => fileInputRef.current?.click()} className="w-full flex items-center gap-3 p-3 rounded-xl bg-zinc-50 active:bg-zinc-100 transition-colors">
             <Upload className="w-4 h-4 text-indigo-500" />
             <div className="text-left flex-1">
-              <p className="text-xs font-medium">Impor Data</p>
-              <p className="text-[10px] text-zinc-400">Pulihkan dari file backup JSON</p>
+              <p className="text-xs font-medium">Impor File</p>
+              <p className="text-[10px] text-zinc-400">Pulihkan dari file JSON</p>
             </div>
           </button>
           <input ref={fileInputRef} type="file" accept=".json" onChange={handleImport} className="hidden" />
@@ -257,6 +387,53 @@ export function SettingPage() {
           </button>
         </div>
       </div>
+
+      {/* SQL Setup Helper Modal */}
+      <Modal open={showSqlModal} onClose={() => setShowSqlModal(false)} title="Setup Database Supabase">
+        <div className="space-y-3">
+          <p className="text-xs text-zinc-600 leading-relaxed">
+            Agar fitur Cloud Sync aktif, jalankan script SQL ini 1 kali saja di **SQL Editor** Supabase kamu:
+          </p>
+
+          <div className="relative">
+            <pre className="bg-zinc-900 text-zinc-100 p-3 rounded-xl text-[11px] font-mono overflow-x-auto leading-relaxed max-h-48">
+              {quickSqlScript}
+            </pre>
+            <button
+              onClick={handleCopySql}
+              className="absolute top-2 right-2 px-2.5 py-1.5 bg-white/20 hover:bg-white/30 text-white rounded-lg text-xs font-semibold flex items-center gap-1 active:scale-95 transition-all"
+            >
+              {copiedSql ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+              <span>{copiedSql ? 'Tersalin!' : 'Salin SQL'}</span>
+            </button>
+          </div>
+
+          <div className="space-y-2 pt-2">
+            <a
+              href="https://supabase.com/dashboard/project/cpbadvkgajzpxojvhfdv/sql"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full btn-primary py-2.5 text-xs font-semibold flex items-center justify-center gap-1.5"
+            >
+              <span>Buka SQL Editor Supabase</span>
+              <span className="text-xs">↗</span>
+            </a>
+            <p className="text-[10px] text-zinc-400 text-center">
+              Setelah paste dan klik "Run" di Supabase, kembali ke sini dan klik "Cadangkan Data".
+            </p>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Restore Confirm Dialog */}
+      <ConfirmDialog
+        open={showRestoreConfirm}
+        onClose={() => setShowRestoreConfirm(false)}
+        onConfirm={handlePullCloud}
+        title="Pulihkan dari Cloud"
+        message="Ini akan menimpa data di perangkat ini dengan data cadangan terbaru dari Supabase Cloud. Lanjutkan?"
+        confirmText="Pulihkan Sekarang"
+      />
 
       {/* Category CRUD Modal */}
       <Modal open={showCategoryModal} onClose={() => setShowCategoryModal(false)} title="Kelola Kategori">
