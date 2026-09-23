@@ -34,8 +34,22 @@ export async function checkCloudConnection(): Promise<{ connected: boolean; tabl
   }
 }
 
+function getSyncSlotId(targetUsername?: string): string {
+  if (targetUsername) return `sync:${targetUsername.trim().toLowerCase()}`;
+  try {
+    const savedUser = localStorage.getItem('spendly_current_user');
+    if (savedUser) {
+      const parsed = JSON.parse(savedUser);
+      if (parsed.username) return `sync:${parsed.username.trim().toLowerCase()}`;
+    }
+  } catch {
+    /* ignore */
+  }
+  return 'main';
+}
+
 /** Push all local IndexedDB data to Supabase Cloud */
-export async function pushToCloud(): Promise<{ success: boolean; error?: string }> {
+export async function pushToCloud(targetUsername?: string): Promise<{ success: boolean; error?: string }> {
   try {
     const [transactions, wallets, categories, debts, expenseTemplates, customRekapCards] = await Promise.all([
       db.transactions.toArray(),
@@ -59,9 +73,11 @@ export async function pushToCloud(): Promise<{ success: boolean; error?: string 
       exportedAt: new Date().toISOString(),
     };
 
-    // 1. Save atomic full snapshot to spendly_sync
+    const slotId = getSyncSlotId(targetUsername);
+
+    // 1. Save atomic full snapshot to spendly_sync under user slot
     const { error: syncError } = await supabase.from('spendly_sync').upsert({
-      id: 'main',
+      id: slotId,
       data: payload,
       updated_at: new Date().toISOString(),
     });
@@ -126,12 +142,13 @@ export async function pushToCloud(): Promise<{ success: boolean; error?: string 
 }
 
 /** Pull latest data from Supabase Cloud and restore locally */
-export async function pullFromCloud(): Promise<{ success: boolean; count?: number; error?: string }> {
+export async function pullFromCloud(targetUsername?: string): Promise<{ success: boolean; count?: number; error?: string }> {
   try {
+    const slotId = getSyncSlotId(targetUsername);
     const { data, error } = await supabase
       .from('spendly_sync')
       .select('data')
-      .eq('id', 'main')
+      .eq('id', slotId)
       .single();
 
     if (error) {

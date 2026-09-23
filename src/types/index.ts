@@ -73,6 +73,15 @@ export interface CustomRekapCard {
   createdAt: number;
 }
 
+// User Profile
+export interface UserProfile {
+  username: string;
+  displayName: string;
+  password?: string;
+  createdAt: number;
+  avatarColor?: string;
+}
+
 // Theme
 export type ThemeColor = 'blue' | 'green' | 'red' | 'purple' | 'orange' | 'pink' | 'teal';
 export type TabId = 'transaksi' | 'rekening' | 'rekap' | 'hutang' | 'setting';
