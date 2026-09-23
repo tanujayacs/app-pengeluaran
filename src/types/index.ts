@@ -1,5 +1,5 @@
 // ============================================================
-// Spendly — Core Domain Types
+// Spendly v2 — Core Domain Types
 // ============================================================
 
 export interface Transaction {
@@ -9,11 +9,10 @@ export interface Transaction {
   categoryId: number;
   walletId: number;
   destinationWalletId?: number;
-  merchant: string;
-  date: string; // ISO format: YYYY-MM-DD
-  time: string; // HH:mm
+  title: string;
+  date: string;       // YYYY-MM-DD
+  time: string;       // HH:mm
   notes?: string;
-  tags?: string[];
   createdAt: number;
 }
 
@@ -30,40 +29,51 @@ export interface Category {
   id?: number;
   name: string;
   type: 'expense' | 'income';
-  color: string;
   icon: string;
-  isDefault?: boolean;
 }
 
-export interface Budget {
-  id?: number;
-  month: string; // YYYY-MM
-  categoryId: number;
-  allocatedAmount: number;
-}
-
-export interface RecurringTransaction {
+export interface Debt {
   id?: number;
   name: string;
+  type: 'receivable' | 'payable'; // dihutangi / berhutang
+  amount: number;
+  date: string;
+  notes?: string;
+  settled: boolean;
+  settledDate?: string;
+  createdAt: number;
+}
+
+export interface ExpenseTemplate {
+  id?: number;
+  name: string;
+  items: TemplateItem[];
+}
+
+export interface TemplateItem {
+  title: string;
   amount: number;
   categoryId: number;
   walletId: number;
-  frequency: 'daily' | 'weekly' | 'monthly' | 'yearly';
-  nextDueDate: string;
-  active: boolean;
 }
 
-export interface SavingsGoal {
+export interface AppSettings {
+  themeColor: ThemeColor;
+  language: 'id' | 'en';
+  showDecimal: boolean;
+  monthStartDate: number;
+  showAccumulatedBalance: boolean;
+}
+
+export interface CustomRekapCard {
   id?: number;
   name: string;
-  targetAmount: number;
-  currentAmount: number;
-  deadline?: string;
-  icon: string;
+  startDate: string;
+  endDate: string;
+  createdAt: number;
 }
 
-// Navigation
-export type TabId = 'dashboard' | 'transactions' | 'wallets' | 'budget' | 'reports' | 'recurring' | 'goals' | 'settings';
-
 // Theme
+export type ThemeColor = 'blue' | 'green' | 'red' | 'purple' | 'orange' | 'pink' | 'teal';
+export type TabId = 'transaksi' | 'rekening' | 'rekap' | 'hutang' | 'setting';
 export type Theme = 'light' | 'dark';

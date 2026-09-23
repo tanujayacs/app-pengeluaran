@@ -1,34 +1,24 @@
 // ============================================================
-// Spendly — Toast Notification Component
+// Spendly v2 — Toast Notification
 // ============================================================
-import { CheckCircle, XCircle, Info, X } from 'lucide-react';
 import { useStore } from '../hooks/useStore';
+import { CheckCircle, AlertCircle, Info } from 'lucide-react';
 
 export function Toast() {
-  const toast = useStore(s => s.toast);
-
+  const { toast } = useStore();
   if (!toast) return null;
 
   const icons = {
-    success: <CheckCircle className="w-5 h-5 text-emerald-500" />,
-    error: <XCircle className="w-5 h-5 text-rose-500" />,
-    info: <Info className="w-5 h-5 text-sky-500" />,
-  };
-
-  const bgColors = {
-    success: 'bg-emerald-50 dark:bg-emerald-950/50 border-emerald-200 dark:border-emerald-800',
-    error: 'bg-rose-50 dark:bg-rose-950/50 border-rose-200 dark:border-rose-800',
-    info: 'bg-sky-50 dark:bg-sky-950/50 border-sky-200 dark:border-sky-800',
+    success: <CheckCircle className="w-4 h-4 text-emerald-500" />,
+    error: <AlertCircle className="w-4 h-4 text-rose-500" />,
+    info: <Info className="w-4 h-4 text-blue-500" />,
   };
 
   return (
-    <div className="fixed top-4 right-4 z-[100] animate-slide-up">
-      <div className={`flex items-center gap-3 px-4 py-3 rounded-xl border shadow-lg ${bgColors[toast.type]}`}>
+    <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[70] max-w-[440px] w-[calc(100%-2rem)] animate-slide-up">
+      <div className="bg-white rounded-xl shadow-lg border border-zinc-100 px-4 py-3 flex items-center gap-3">
         {icons[toast.type]}
-        <span className="text-sm font-medium">{toast.message}</span>
-        <button onClick={() => useStore.setState({ toast: null })} className="ml-2 opacity-60 hover:opacity-100">
-          <X className="w-4 h-4" />
-        </button>
+        <p className="text-sm font-medium text-zinc-700 flex-1">{toast.message}</p>
       </div>
     </div>
   );
